@@ -86,7 +86,7 @@ def num_rows_in_vcf_files():
             total_lines += sum(1 for line in f if not line.startswith('#'))
     return total_lines
 
-num_rows = num_rows_in_vcf_files()
+num_rows = 249250621
 
 def generate(dict_properties):
     total_dict =[]
@@ -95,24 +95,21 @@ def generate(dict_properties):
     
     for vcf_filename in glob.glob("files/vcf/files_to_read/*.vcf.gz"):
         print(vcf_filename)
-        vcf = VCF(vcf_filename, strict_gt=True)
-        my_target_list = vcf.samples
+        vcf = VCF(vcf_filename)
+        vcf.set_samples([])
+
+        #my_target_list = vcf.samples
         count=0
         
 
         pbar = tqdm(total = num_rows)
+
         for v in vcf:
             #print(v)
+            
             dict_to_xls={}
-            vstringed = str(v)
-            for population_splitted in pipeline['frequencyInPopulations|frequencies|population']:
-                splitword=population_splitted['fullname']+'='
-                v_splitted = vstringed.split(splitword)
-                if len(v_splitted) < 2:
-                    continue
-                else:
-                    population = population_splitted['shortname']
-
+            population='COVID_pop11_fin_2'
+            '''
             if conf.case_level_data == True:
                 clinicalRelevanceword=pipeline['caseLevelData|clinicalInterpretations|clinicalRelevance']+'='
                 effectIdWord=pipeline['caseLevelData|clinicalInterpretations|effect|id']+'='
@@ -158,41 +155,73 @@ def generate(dict_properties):
                         dict_to_xls['caseLevelData|clinicalInterpretations|effect|label']=effectlabel
                 except Exception:
                     pass
+            '''
             try:
-                v_resplitted = v_splitted[1].split(';')
-                allele_frequency = v_resplitted[0]
-                try:
-                    allele_frequency = float(allele_frequency)
-                except Exception:
-                    allele_frequency = allele_frequency.split(',')
-                    allele_frequency=float(allele_frequency[0])
-                if allele_frequency != '' and population != '':
-                    dict_to_xls['frequencyInPopulations|sourceReference']='gnomad.broadinstitute.org/'
-                    dict_to_xls['frequencyInPopulations|source']='The Genome Aggregation Database (gnomAD)'
-                    dict_to_xls['frequencyInPopulations|frequencies|population']=population
-                    dict_to_xls['frequencyInPopulations|frequencies|alleleFrequency']=allele_frequency
-            except Exception:
-                try:
-                    allele_frequency=v.INFO.get('AF')
-                    if isinstance(allele_frequency, tuple):
-                        allele_frequency=list(allele_frequency)
-                        allele_frequency[0]
-                    else:
-                        allele_frequency = float(v.INFO.get('AF'))
-                    allele_number = float(v.INFO.get('AN'))
-                    allele_count = float(v.INFO.get('AC'))
-                    ac_hom = float(v.INFO.get('AC_Hom'))
-                    ac_het= float(v.INFO.get('AC_Het'))
-                    dict_to_xls['frequencyInPopulations|sourceReference']=pipeline["frequencyInPopulations|sourceReference"]
-                    dict_to_xls['frequencyInPopulations|source']=pipeline["frequencyInPopulations|source"]
-                    dict_to_xls['frequencyInPopulations|frequencies|population']=pipeline["frequencyInPopulations|frequencies|population"][0]["fullname"]
-                    dict_to_xls['frequencyInPopulations|frequencies|alleleFrequency']=allele_frequency
-                except Exception:
-                    pass
-            try:
-                if v.INFO.get('VT') == 'SV': continue
+                varianttype=v.INFO.get('VT')
+                if varianttype == 'SV': continue
             except Exception:
                 pass
+            try:
+                allele_frequency=v.INFO.get('AF')
+                if allele_frequency == None:
+                    i+=1
+                    pbar.update(1)
+                    continue
+                if isinstance(allele_frequency, tuple):
+                    allele_frequency=list(allele_frequency)
+                    allele_frequency=allele_frequency[0]
+                else:
+                    allele_frequency = float(allele_frequency)
+                if allele_frequency == 0.0:
+                    i+=1
+                    pbar.update(1)
+                    continue
+                allele_number=v.INFO.get('AN')
+                if allele_number == None:
+                    i+=1
+                    continue
+                elif isinstance(allele_number, tuple):
+                    allele_number=list(allele_number)
+                    allele_number[0]
+                else:
+                    allele_number = float(allele_number)
+                allele_count=v.INFO.get('AC')
+                if allele_count == None:
+                    i+=1
+                    pbar.update(1)
+                    continue
+                elif isinstance(allele_count, tuple):
+                    allele_count=list(allele_count)
+                    allele_count[0]
+                else:
+                    allele_count = float(allele_count)
+                ac_hom=v.INFO.get('AC_Hom')
+                if ac_hom == None:
+                    i+=1
+                    continue
+                elif isinstance(ac_hom, tuple):
+                    ac_hom=list(ac_hom)
+                    ac_hom[0]
+                else:
+                    ac_hom = float(v.INFO.get('AC_Hom'))
+                ac_het=v.INFO.get('AC_Het')
+
+                if ac_het == None:
+                    i+=1
+                    continue
+                elif isinstance(ac_het, tuple):
+                    ac_het=list(ac_het)
+                    ac_het[0]
+                else:
+                    ac_het = float(v.INFO.get('AC_Het'))
+                dict_to_xls['frequencyInPopulations|sourceReference']=pipeline["frequencyInPopulations|sourceReference"]
+                dict_to_xls['frequencyInPopulations|source']=pipeline["frequencyInPopulations|source"]
+                dict_to_xls['frequencyInPopulations|frequencies|population']=population
+                dict_to_xls['frequencyInPopulations|frequencies|alleleFrequency']=allele_frequency
+            except Exception as e:
+                continue
+            #print(allele_frequency)
+
             '''
             try:
                 allele_frequency = v.INFO.get('AF')
@@ -213,8 +242,8 @@ def generate(dict_properties):
 
             dict_to_xls['variation|referenceBases'] = ref
             try:
-                dict_to_xls['variation|variantType'] = v.INFO.get('VT')
-                if v.INFO.get('VT') is None:
+                dict_to_xls['variation|variantType'] = varianttype
+                if varianttype is None:
                     if len(alt[0]) == len(ref):
                         dict_to_xls['variation|variantType']='SNP'
                     else:
@@ -222,6 +251,7 @@ def generate(dict_properties):
             except Exception:
                 dict_to_xls['variation|variantType']='UNKNOWN'
             #print(v.INFO.get('ANN'))
+            '''
             if v.INFO.get('ANN') is not None:
                 annot = v.INFO.get('ANN')
                 transcripts = annot.split(',')
@@ -262,7 +292,7 @@ def generate(dict_properties):
                                     dict_to_xls['molecularAttributes|molecularEffects|id'] = "SO:0001574"
                                 elif annotation == 'stop_retained_variant':
                                     dict_to_xls['molecularAttributes|molecularEffects|id'] = "SO:0001567"
-                                               
+                                            
                             else:
                                 dict_to_xls['molecularAttributes|molecularEffects|label'] += "|"+annotation
                                 if annotation == 'missense_variant':
@@ -354,6 +384,9 @@ def generate(dict_properties):
                         dict_to_xls['molecularAttributes|aminoacidChanges'] = annotations[10]
                     dict_to_xls['molecularAttributes|geneIds'] = annotations[4]
 
+
+
+
             
             
             zigosity={}
@@ -398,6 +431,7 @@ def generate(dict_properties):
                     
                 if dict_to_xls['caseLevelData|biosampleId'] == '':
                     continue
+            '''
             chromos=re.sub(r"</?\[>", "", chrom)
             chromos=chromos.replace("chr","")
             if conf.reference_genome == 'GRCh37':
@@ -782,6 +816,7 @@ def generate(dict_properties):
             except Exception:
                 pass
             total_dict.append(definitivedict)
+
             pbar.update(1)
             i+=1
             
@@ -796,6 +831,7 @@ def generate(dict_properties):
                 gc.collect()
                 total_dict=[]
                 pbar.update(1)
+            
 
             
 
