@@ -1,4 +1,4 @@
-version: "3.8"
+
 
 networks:
   my-app-network:
@@ -9,7 +9,7 @@ services:
   beacon-ri-tools-v2:
     build:
       context: ./
-    container_name: ri-tools
+    #container_name: ri-tools
     volumes:
       - ./output_docs:/usr/src/app/output_docs
       - ./conf:/usr/src/app/conf
