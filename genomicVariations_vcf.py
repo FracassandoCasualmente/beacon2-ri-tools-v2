@@ -1,5 +1,7 @@
 from cyvcf2 import VCF
 import json
+from os import getenv
+from os.path import exists
 from tqdm import tqdm
 import glob
 import re
@@ -8,20 +10,24 @@ import uuid
 import json
 import gc
 import gzip
+import sys
 from pymongo.mongo_client import MongoClient
 from validators.genomicVariations import GenomicVariations
 
-client = MongoClient(
-        #"mongodb://127.0.0.1:27017/"
-        "mongodb://{}:{}@{}:{}/{}?authSource={}".format(
+print("starting...")
+
+url_db = "mongodb://{}:{}@{}:{}/{}?authSource={}".format(
             conf.database_user,
-            conf.database_password,
+            getenv("DB_PASSWD", conf.database_password),
             conf.database_host,
             conf.database_port,
             conf.database_name,
             conf.database_auth_source,
         )
-    )
+
+client = MongoClient(url_db)
+
+#print(f"URL DB: {url_db}")
 
 with open('files/deref_schemas/genomicVariations.json') as json_file:
     dict_properties = json.load(json_file)
@@ -88,15 +94,20 @@ def num_rows_in_vcf_files():
 
 num_rows = 249250621
 
-def generate(dict_properties):
+def generate(dict_properties, vcf_filenames=None):
     total_dict =[]
     i=1
     l=0
     
-    for vcf_filename in glob.glob("files/vcf/files_to_read/*.vcf.gz"):
+    # if no file specified, get all vcfs in default dir
+    if vcf_filenames == []:
+        vcf_filenames = glob.glob("files/vcf/files_to_read/*.vcf.gz")
+    
+    for vcf_filename in vcf_filenames:
         print(vcf_filename)
         vcf = VCF(vcf_filename)
-        vcf.set_samples([])
+        # uncomment to make script faster, but can no longer calc ac_hom and ac_het on the fly
+        #vcf.set_samples([])
 
         #my_target_list = vcf.samples
         count=0
@@ -197,8 +208,9 @@ def generate(dict_properties):
                     allele_count = float(allele_count)
                 ac_hom=v.INFO.get('AC_Hom')
                 if ac_hom == None:
-                    i+=1
-                    continue
+                    ac_hom = v.num_hom_alt + v.num_hom_ref
+                    #i+=1
+                    #continue
                 elif isinstance(ac_hom, tuple):
                     ac_hom=list(ac_hom)
                     ac_hom[0]
@@ -207,8 +219,9 @@ def generate(dict_properties):
                 ac_het=v.INFO.get('AC_Het')
 
                 if ac_het == None:
-                    i+=1
-                    continue
+                    ac_het = v.num_het
+                    #i+=1
+                    #continue
                 elif isinstance(ac_het, tuple):
                     ac_het=list(ac_het)
                     ac_het[0]
@@ -218,7 +231,12 @@ def generate(dict_properties):
                 dict_to_xls['frequencyInPopulations|source']=pipeline["frequencyInPopulations|source"]
                 dict_to_xls['frequencyInPopulations|frequencies|population']=population
                 dict_to_xls['frequencyInPopulations|frequencies|alleleFrequency']=allele_frequency
+                
+                #print(f"V: {v}")
+                #print(f"AC values extracted: ac_hom = {ac_hom} ; ac_het = {ac_het}")
+                #print(f"dict_to_xls = {dict_to_xls}")
             except Exception as e:
+                print(f"Exception while extracting valules of variant: {str(e)}")
                 continue
             #print(allele_frequency)
 
@@ -813,7 +831,9 @@ def generate(dict_properties):
                 definitivedict["frequencyInPopulations"][0]["frequencies"][0]["alleleNumber"]=allele_number
                 definitivedict["frequencyInPopulations"][0]["frequencies"][0]["alleleCountHomozygous"]=ac_hom
                 definitivedict["frequencyInPopulations"][0]["frequencies"][0]["alleleCountHeterozygous"]=ac_het
-            except Exception:
+               
+            except Exception as ex:
+                print(f"Exception while filling definitive dict: {str(ex)}")
                 pass
             total_dict.append(definitivedict)
 
@@ -844,7 +864,18 @@ def generate(dict_properties):
     pbar.close()
     return i, l
 
-total_i, l=generate(dict_properties)
+
+# ---- MAIN ----
+
+vcf_filenames = sys.argv[1:]
+
+# validate that all files exist before processing
+for file in vcf_filenames:
+    if not exists(file):
+        print(f"File not found: {file}")
+        exit(1)
+        
+total_i, l=generate(dict_properties, vcf_filenames)
 
 
 if total_i-l > 0:
