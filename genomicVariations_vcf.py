@@ -125,7 +125,7 @@ def generate(dict_properties, vcf_filenames=None):
                 if found_item == None:
                     dict_target={}
                     dict_target["datasetId"]=conf.datasetId
-                    dict_target["biosampleIds"]=my_target_list
+                    dict_target["biosamplvcfeIds"]=my_target_list
                     target_list=[dict_target]
                     client.beacon.targets.insert_many(target_list)
             except Exception:
@@ -183,7 +183,7 @@ def generate(dict_properties, vcf_filenames=None):
                     allele_count = float(allele_count)
                 ac_hom=v.INFO.get('AC_Hom')
                 if ac_hom == None:
-                    ac_hom = v.num_hom_alt + v.num_hom_ref
+                    ac_hom = v.num_hom_alt
                     #i+=1
                     #continue
                 elif isinstance(ac_hom, tuple):
