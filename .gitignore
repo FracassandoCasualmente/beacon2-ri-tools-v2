@@ -8,7 +8,12 @@ snpEFF
 bcftools*
 scripts/datasheet/conf/__pycache__/*
 *.vcf.gz
+*.vcf.gz.c4gh
 *.vcf
 *.vcf.gz.tbi
 *.vcf.bgz.tbi
 vcf_BelCovid_2
+
+outputs_cmds/*
+!outputs_cmds/.gitkeep
+nohup.out

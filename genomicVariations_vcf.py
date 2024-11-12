@@ -182,8 +182,12 @@ def generate(dict_properties, vcf_filenames=None):
                 else:
                     allele_count = float(allele_count)
                 ac_hom=v.INFO.get('AC_Hom')
+                # TODO: Make the on the fly calculations work
+                # for lines with more than 1 ALT allele
                 if ac_hom == None:
-                    ac_hom = v.num_hom_alt
+                    # count homozygous variants on the fly
+                    # since 2 alleles per sample -> 2 allele counts!
+                    ac_hom = 2 * v.num_hom_alt
                     #i+=1
                     #continue
                 elif isinstance(ac_hom, tuple):
@@ -194,6 +198,7 @@ def generate(dict_properties, vcf_filenames=None):
                 ac_het=v.INFO.get('AC_Het')
 
                 if ac_het == None:
+                    # calculate heterozygous counts on the fly
                     ac_het = v.num_het
                     #i+=1
                     #continue
