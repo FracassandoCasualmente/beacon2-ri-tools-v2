@@ -11,7 +11,7 @@ case_level_data=False
 num_rows=7000000
 
 ### MongoDB parameters ###
-database_host = 'mongo'
+database_host = 'db'
 database_port = 27017
 database_user = 'root'
 database_password = os.getenv("DB_PASSWD","example")
